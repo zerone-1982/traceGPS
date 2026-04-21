@@ -5,7 +5,7 @@ import plotly.express as px
 # 1. Page Configuration
 st.set_page_config(page_title="Ship Tracker", layout="wide")
 
-st.title("🚢 Ship GPS Data Visualizer")
+st.title("🚢 Voyage Visualizer")
 st.write("Upload your voyage CSV file to view the path on an interactive map.")
 
 # 2. Streamlit's Native File Uploader (Replaces Tkinter)
@@ -41,8 +41,8 @@ if uploaded_file is not None:
             st.plotly_chart(fig, use_container_width=True)
             
             # Show a data preview below the map
-            st.subheader("Recent Data Points")
-            st.dataframe(df.tail(10))
+            #st.subheader("Recent Data Points")
+            #st.dataframe(df.tail(10))
             
         else:
             st.error(f"Error: Missing columns. Your CSV must have: {required_cols}")
