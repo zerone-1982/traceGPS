@@ -1,65 +1,51 @@
+import streamlit as st
 import pandas as pd
 import plotly.express as px
-import tkinter as tk
-from tkinter import filedialog, messagebox
-import os
-import sys
 
-def create_map():
-    # Set up the file selection window
-    root = tk.Tk()
-    root.withdraw()  # Hide the main Tkinter window
-    root.attributes("-topmost", True)  # Bring the file dialog to the front
+# 1. Page Configuration
+st.set_page_config(page_title="Ship Tracker", layout="wide")
 
-    # Open file explorer to select the CSV
-    file_path = filedialog.askopenfilename(
-        title="Select Voyage CSV Data",
-        filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
-    )
+st.title("🚢 Ship GPS Data Visualizer")
+st.write("Upload your voyage CSV file to view the path on an interactive map.")
 
-    # If the user cancels the selection
-    if not file_path:
-        return
+# 2. Streamlit's Native File Uploader (Replaces Tkinter)
+uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
+if uploaded_file is not None:
     try:
-        # 1. Load the data
-        df = pd.read_csv(file_path)
+        # Load the data
+        df = pd.read_csv(uploaded_file)
         
-        # 2. Check for required columns
+        # Check for required columns
         required_cols = ['Lat_deg', 'Lon_deg', 'UTC_ISO8601']
-        if not all(col in df.columns for col in required_cols):
-            messagebox.showerror("Column Error", 
-                                 f"Missing columns! Your CSV must have: {', '.join(required_cols)}")
-            return
+        if all(col in df.columns for col in required_cols):
+            
+            # 3. Create Map using OpenStreetMap (Free)
+            fig = px.scatter_mapbox(
+                df, 
+                lat="Lat_deg", 
+                lon="Lon_deg", 
+                hover_name="UTC_ISO8601", 
+                color="SOG_kts" if "SOG_kts" in df.columns else None,
+                zoom=14, 
+                height=700,
+                title="Ship Trajectory"
+            )
 
-        # 3. Create the Interactive Map
-        # We use 'open-street-map' because it does not require an API token
-        fig = px.scatter_mapbox(
-            df, 
-            lat="Lat_deg", 
-            lon="Lon_deg", 
-            hover_name="UTC_ISO8601", 
-            color="SOG_kts" if "SOG_kts" in df.columns else None,
-            zoom=13, 
-            height=800,
-            title=f"Ship Track Visualization: {os.path.basename(file_path)}"
-        )
+            fig.update_layout(
+                mapbox_style="open-street-map",
+                margin={"r":0,"t":40,"l":0,"b":0}
+            )
 
-        fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"r":0,"t":50,"l":0,"b":0}
-        )
-
-        # 4. Save and Open
-        # This saves a temporary HTML file in the same folder as the EXE
-        output_file = "temp_ship_map.html"
-        fig.write_html(output_file)
-        
-        # Use os.startfile to open the map in the default browser
-        os.startfile(output_file)
-
+            # 4. Display the map in the browser
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # Show a data preview below the map
+            st.subheader("Recent Data Points")
+            st.dataframe(df.tail(10))
+            
+        else:
+            st.error(f"Error: Missing columns. Your CSV must have: {required_cols}")
+            
     except Exception as e:
-        messagebox.showerror("Error", f"An unexpected error occurred:\n{str(e)}")
-
-if __name__ == "__main__":
-    create_map()
+        st.error(f"An error occurred while processing the file: {e}")
